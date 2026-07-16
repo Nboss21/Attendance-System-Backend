@@ -1,0 +1,39 @@
+generator client {
+ provider = "prisma-client-js"
+}
+
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+
+enum CompanyStatus {
+ ACTIVE
+ SUSPENDED
+ INACTIVE
+}
+
+model Company {
+ id String @id @default(uuid()) @db.Uuid
+ name String
+ code String @unique
+ status CompanyStatus @default(ACTIVE)
+ plan String?
+ settings Json?
+ branches Branch[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+
+model Branch {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @db.Uuid
+ company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+ name String
+ address String?
+ timezone String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([companyId])
+ @@unique([companyId, name])
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+coverage/
+*.log
+.DS_Store
+ELICO-Backend-Technical-Breakdown (2).md
+ELICO-Task-Split.md
+
+.env.example

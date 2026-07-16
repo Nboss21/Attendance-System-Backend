@@ -1,0 +1,5 @@
+CREATE TYPE "CompanyStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'INACTIVE');
+CREATE TABLE "Company" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "name" TEXT NOT NULL, "code" TEXT NOT NULL, "status" "CompanyStatus" NOT NULL DEFAULT 'ACTIVE', "plan" TEXT, "settings" JSONB, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Company_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "Company_code_key" ON "Company"("code");
+CREATE TABLE "Branch" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "companyId" UUID NOT NULL, "name" TEXT NOT NULL, "address" TEXT, "timezone" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Branch_pkey" PRIMARY KEY ("id"), CONSTRAINT "Branch_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE);
+CREATE INDEX "Branch_companyId_idx" ON "Branch"("companyId"); CREATE UNIQUE INDEX "Branch_companyId_name_key" ON "Branch"("companyId", "name");
