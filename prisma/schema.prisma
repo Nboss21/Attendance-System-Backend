@@ -1,39 +1,243 @@
 generator client {
- provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
- provider = "postgresql"
- url = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum CompanyStatus {
- ACTIVE
- SUSPENDED
- INACTIVE
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  HR_MANAGER
+  BRANCH_MANAGER
+  EMPLOYEE
+  DEVICE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
 }
 
 model Company {
- id String @id @default(uuid()) @db.Uuid
- name String
- code String @unique
- status CompanyStatus @default(ACTIVE)
- plan String?
- settings Json?
- branches Branch[]
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  code        String        @unique
+  status      CompanyStatus @default(ACTIVE)
+  plan        String?
+  settings    Json?
+  branches    Branch[]
+  users       User[]
+  employees   Employee[]
+  departments Department[]
+  positions   Position[]
+  devices     Device[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model Branch {
- id String @id @default(uuid()) @db.Uuid
- companyId String @db.Uuid
- company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
- name String
- address String?
- timezone String
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
- @@index([companyId])
- @@unique([companyId, name])
+  id        String     @id @default(uuid()) @db.Uuid
+  companyId String     @db.Uuid
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  timezone  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  employees Employee[]
+  devices   Device[]
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  companyId     String?        @db.Uuid
+  company       Company?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email         String         @unique
+  passwordHash  String
+  role          UserRole
+  status        UserStatus     @default(ACTIVE)
+  employee      Employee?
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([companyId, role])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model Department {
+  id        String     @id @default(uuid()) @db.Uuid
+  companyId String     @db.Uuid
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  employees Employee[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Position {
+  id        String     @id @default(uuid()) @db.Uuid
+  companyId String     @db.Uuid
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  employees Employee[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Employee {
+  id           String         @id @default(uuid()) @db.Uuid
+  companyId    String         @db.Uuid
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId     String?        @db.Uuid
+  branch       Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  userId       String?        @unique @db.Uuid
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employeeCode String
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  departmentId String?        @db.Uuid
+  department   Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  positionId   String?        @db.Uuid
+  position     Position?      @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  hireDate     DateTime?
+  status       EmployeeStatus @default(ACTIVE)
+  terminatedAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId, status])
+  @@index([branchId])
+}
+
+// ─── Device enums ────────────────────────────────────────────────────────────
+
+enum DeviceType {
+  FACE
+  FINGERPRINT
+  RFID
+  QR
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum MatchingMode {
+  ON_DEVICE
+  SERVER_SIDE
+}
+
+enum DeviceCommandType {
+  SYNC_TEMPLATES
+  REBOOT
+  ENROLL_START
+}
+
+// ─── Device tables ───────────────────────────────────────────────────────────
+
+model Device {
+  id              String            @id @default(uuid()) @db.Uuid
+  companyId       String            @db.Uuid
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId        String?           @db.Uuid
+  branch          Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  serialNumber    String            @unique
+  type            DeviceType
+  ipAddress       String?
+  status          DeviceStatus      @default(ACTIVE)
+  lastHeartbeatAt DateTime?
+  firmwareVersion String?
+  matchingMode    MatchingMode      @default(ON_DEVICE)
+  credential      DeviceCredential?
+  commands        DeviceCommand[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([companyId, status])
+  @@index([branchId])
+}
+
+model DeviceCredential {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String   @unique @db.Uuid
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  keyHash   String
+  createdAt DateTime @default(now())
+}
+
+/// Persisted command queue — poll-based fallback for HTTP-only devices.
+/// Feature 6 (DeviceGateway) will push these over WebSocket and mark sentAt.
+model DeviceCommand {
+  id        String            @id @default(uuid()) @db.Uuid
+  deviceId  String            @db.Uuid
+  device    Device            @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  command   DeviceCommandType
+  payload   Json?
+  sentAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([deviceId, sentAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actorId   String?  @db.Uuid
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@index([companyId])
+  @@index([actorId])
+  @@index([entity, entityId])
 }
