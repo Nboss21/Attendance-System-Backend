@@ -1,0 +1,5 @@
+import { EmployeeStatus } from '@prisma/client';
+import { IsDateString, IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+export class CreateEmployeeDto { @IsString() @MinLength(1) employeeCode!: string; @IsString() firstName!: string; @IsString() lastName!: string; @IsOptional() @IsEmail() email?: string; @IsOptional() @IsString() phone?: string; @IsOptional() @IsUUID() branchId?: string; @IsOptional() @IsUUID() departmentId?: string; @IsOptional() @IsUUID() positionId?: string; @IsOptional() @IsDateString() hireDate?: string; }
+export class UpdateEmployeeDto { @IsOptional() @IsString() firstName?: string; @IsOptional() @IsString() lastName?: string; @IsOptional() @IsEmail() email?: string; @IsOptional() @IsString() phone?: string; @IsOptional() @IsUUID() branchId?: string; @IsOptional() @IsUUID() departmentId?: string; @IsOptional() @IsUUID() positionId?: string; @IsOptional() @IsDateString() hireDate?: string; @IsOptional() @IsEnum(EmployeeStatus) status?: EmployeeStatus; }
+export class CreateNamedDto { @IsString() @MinLength(1) name!: string; }
