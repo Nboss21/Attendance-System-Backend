@@ -1,5 +1,6 @@
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantModule } from './common/tenant/tenant.module';
@@ -14,9 +15,15 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RbacGuard } from './common/auth/rbac.guard';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { ShiftsModule } from './modules/shifts/shifts.module';
+import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
     PrismaModule,
     TenantModule,
     AuthModule,
@@ -27,6 +34,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     AuditModule,
     EventEmitterModule.forRoot(),
     SuperAdminModule,
+    ShiftsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
