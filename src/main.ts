@@ -1,8 +1,10 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module';
 import { RedisIoAdapter } from './common/adapters/socket-io-redis.adapter';
+import { ENV } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,8 +18,15 @@ async function bootstrap() {
   app.useWebSocketAdapter(redisIoAdapter);
 
   const config = new DocumentBuilder().setTitle('ELICO API').setVersion('v1').build();
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
+  const document = SwaggerModule.createDocument(app, config);
+  app.use(
+    '/api/docs',
+    apiReference({
+      theme: 'deepSpace', 
+      content: document,
+    }),
+  );
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(ENV.PORT ?? 3000);
 }
 bootstrap();
