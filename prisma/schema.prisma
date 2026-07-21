@@ -46,14 +46,16 @@ model Company {
   status      CompanyStatus @default(ACTIVE)
   plan        String?
   settings    Json?
-  branches    Branch[]
-  users       User[]
-  employees   Employee[]
-  departments Department[]
-  positions   Position[]
-  devices     Device[]
-  auditLogs   AuditLog[]
-  shifts      Shift[]
+  branches       Branch[]
+  users          User[]
+  employees      Employee[]
+  departments    Department[]
+  positions      Position[]
+  devices        Device[]
+  auditLogs      AuditLog[]
+  shifts         Shift[]
+  punches        AttendancePunch[]
+  attendanceLogs AttendanceLog[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
@@ -150,6 +152,9 @@ model Employee {
   status       EmployeeStatus @default(ACTIVE)
   terminatedAt DateTime?
   schedules    ScheduleAssignment[]
+  biometric    EmployeeBiometricTemplate?
+  punches      AttendancePunch[]
+  attendanceLogs AttendanceLog[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -201,6 +206,7 @@ model Device {
   matchingMode    MatchingMode      @default(ON_DEVICE)
   credential      DeviceCredential?
   commands        DeviceCommand[]
+  punches         AttendancePunch[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -289,4 +295,103 @@ model ScheduleAssignment {
   @@unique([employeeId, date])   
   @@index([shiftId, date])
   @@index([employeeId, date])
+}
+
+// ─── Biometric Templates ─────────────────────────────────────────────────────
+
+model EmployeeBiometricTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  employeeId     String   @unique @db.Uuid
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// Base64-encoded face embedding vector or serialized template bytes
+  embeddingData  String
+  /// Model/algorithm version so stale templates can be detected
+  modelVersion   String   @default("v1")
+  enrolledAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId])
+}
+
+// ─── Attendance Punches (raw, immutable) ─────────────────────────────────────
+
+enum PunchDirection {
+  IN
+  OUT
+  UNKNOWN
+}
+
+enum PunchMethod {
+  FACE
+  FINGERPRINT
+  RFID
+  QR
+  MANUAL
+}
+
+enum PunchStatus {
+  VERIFIED     // Matched with confidence above threshold
+  UNVERIFIED   // Low-confidence match — needs HR review
+  FAILED       // Recognition failed
+}
+
+model AttendancePunch {
+  id            String         @id @default(uuid()) @db.Uuid
+  companyId     String         @db.Uuid
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String?        @db.Uuid
+  employee      Employee?      @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  deviceId      String?        @db.Uuid
+  device        Device?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  timestamp     DateTime
+  direction     PunchDirection @default(UNKNOWN)
+  method        PunchMethod    @default(FACE)
+  confidence    Float?
+  status        PunchStatus    @default(VERIFIED)
+  /// Idempotency key: prevents duplicate punches on device retries
+  idempotencyKey String?       @unique
+  rawImagePath  String?
+  attendanceLog AttendanceLog?
+  createdAt     DateTime       @default(now())
+
+  @@index([companyId, timestamp])
+  @@index([employeeId, timestamp])
+  @@index([deviceId, timestamp])
+}
+
+// ─── Attendance Logs (computed daily records) ────────────────────────────────
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EARLY_LEAVE
+  HALF_DAY
+  ON_LEAVE
+}
+
+model AttendanceLog {
+  id               String           @id @default(uuid()) @db.Uuid
+  companyId        String           @db.Uuid
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId       String           @db.Uuid
+  employee         Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date             DateTime         @db.Date
+  checkIn          DateTime?
+  checkOut         DateTime?
+  status           AttendanceStatus @default(PRESENT)
+  lateMinutes      Int              @default(0)
+  earlyLeaveMinutes Int             @default(0)
+  totalHours       Float?
+  /// The punch that triggered this log record
+  punchId          String?          @unique @db.Uuid
+  punch            AttendancePunch? @relation(fields: [punchId], references: [id], onDelete: SetNull)
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([companyId, date])
+  @@index([employeeId, date])
+  @@index([companyId, status])
 }

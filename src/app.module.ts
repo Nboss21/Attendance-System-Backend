@@ -16,6 +16,8 @@ import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RbacGuard } from './common/auth/rbac.guard';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ShiftsModule } from './modules/shifts/shifts.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { BiometricsModule } from './modules/biometrics/biometrics.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -35,6 +37,8 @@ import { validateEnv } from './config/env.validation';
     EventEmitterModule.forRoot(),
     SuperAdminModule,
     ShiftsModule,
+    AttendanceModule,
+    BiometricsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
