@@ -20,6 +20,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'shifts:manage',
     'shifts:read',
     'audit:read',
+    'attendance:checkin',
+    'attendance:read',
+    'biometrics:manage',
+    'biometrics:read',
   ],
   HR_MANAGER: [
     'employees:manage',
@@ -29,8 +33,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'shifts:manage',
     'shifts:read',
     'audit:read',
+    'attendance:checkin',
+    'attendance:read',
+    'biometrics:manage',
+    'biometrics:read',
   ],
-  BRANCH_MANAGER: ['employees:read', 'devices:read', 'shifts:read'],
-  EMPLOYEE: ['profile:read'],
-  DEVICE: ['device:connect', 'device:heartbeat'],
+  BRANCH_MANAGER: ['employees:read', 'devices:read', 'shifts:read', 'attendance:read'],
+  EMPLOYEE: ['profile:read', 'attendance:checkin', 'attendance:read'],
+  DEVICE: ['device:connect', 'device:heartbeat', 'attendance:checkin'],
 };
+
